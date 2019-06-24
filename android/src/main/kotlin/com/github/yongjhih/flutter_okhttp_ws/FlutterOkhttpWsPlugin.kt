@@ -1,5 +1,7 @@
 package com.github.yongjhih.flutter_okhttp_ws
 
+import android.os.Handler
+import android.os.Looper
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -20,6 +22,7 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
   lateinit var websocket: WebSocket
   var onMessage: (String) -> Unit = {}
   var onClosed: (Int, String) -> Unit = { _, _ -> }
+  val handler: Handler = Handler(Looper.getMainLooper())
 
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
@@ -32,19 +35,27 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             .build()
         websocket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
           override fun onOpen(webSocket: WebSocket, response: Response) {
-            result.success(response.body().toString())
+            handler.post {
+              result.success(response.body().toString())
+            }
           }
 
           override fun onMessage(webSocket: WebSocket, text: String) {
-            onMessage(text)
+            handler.post {
+              onMessage(text)
+            }
           }
 
           override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            result.error(t.message, response?.body().toString(), response)
+            handler.post {
+              result.error(t.message, response?.body().toString(), response)
+            }
           }
 
           override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            onClosed(code, reason)
+            handler.post {
+              onClosed(code, reason)
+            }
           }
         })
       }
