@@ -6,13 +6,13 @@ class FlutterOkhttpWs {
   static const MethodChannel _channel =
       const MethodChannel('flutter_okhttp_ws');
 
-  static Future<String> get connect async {
-    return await _channel.invokeMethod('connect');
+  static Future<String> connect(String url) async {
+    return await _channel.invokeMethod('connect', url);
   }
-  static Future<String> get send async {
-    return await _channel.invokeMethod('send');
+  static Future<String> send(String message) async {
+    return await _channel.invokeMethod('send', message);
   }
-  static Future<int> get close async {
+  static Future<int> close() async {
     return await _channel.invokeMethod('close');
   }
 }
