@@ -36,12 +36,14 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
   val handler: Handler = Handler(Looper.getMainLooper())
 
   override fun onMethodCall(call: MethodCall, result: Result) {
+    println(call.method)
     when (call.method) {
       "connect" -> {
         val url: String = call.argument("url")!!
         val certificate: String? = call.argument("certificate")
         CertificateFactory.getInstance("X.509")
 
+        println(certificate)
         val client = OkHttpClient.Builder()
             .apply {
               hostnameVerifier { _, _ -> true }
@@ -52,31 +54,39 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
               }
               if (certificate != null) {
                 val trustManager = x509TrustManager(Base64.decode(certificate, Base64.NO_WRAP).inputStream())
-                val socketFactory = tlsSocketFactory(arrayOf(trustManager))
+                val socketFactory = if (Build.VERSION.SDK_INT in Build.VERSION_CODES.JELLY_BEAN..Build.VERSION_CODES.LOLLIPOP) {
+                  TlsSocketFactory(tlsSocketFactory(arrayOf(trustManager)))
+                } else {
+                  tlsSocketFactory(arrayOf(trustManager))
+                }
                 sslSocketFactory(socketFactory, trustManager)
               }
             }
             .build()
         websocket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
           override fun onOpen(webSocket: WebSocket, response: Response) {
+          println(response.body().toString())
             handler.post {
               result.success(response.body().toString())
             }
           }
 
-          override fun onMessage(webSocket: WebSocket, text: String) {
+          override fun onMessage(webSocket: WebSocket, message: String) {
+            println(message)
             handler.post {
-              onMessage(text)
+              onMessage(message)
             }
           }
 
           override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            println(t.message)
             handler.post {
               result.error(t.message, response?.body().toString(), response)
             }
           }
 
           override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            println(reason)
             handler.post {
               onClosed(code, reason)
             }
