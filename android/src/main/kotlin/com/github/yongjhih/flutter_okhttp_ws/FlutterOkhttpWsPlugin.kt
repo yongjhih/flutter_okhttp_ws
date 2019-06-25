@@ -93,6 +93,9 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             handler.post {
               onFailure(e, response)
               onFailure = { _, _ -> }
+              onMessage = {}
+              onOpen = { }
+              onClosed = { _, _ -> }
             }
           }
 
