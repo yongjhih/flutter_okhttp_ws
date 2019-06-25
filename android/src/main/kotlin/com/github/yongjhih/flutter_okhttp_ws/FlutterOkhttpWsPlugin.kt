@@ -34,6 +34,8 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
   var onMessage: (String) -> Unit = {}
   var onClosed: (Int, String) -> Unit = { _, _ -> }
   val handler: Handler = Handler(Looper.getMainLooper())
+  var onFailure: (Throwable, Response?) -> Unit = { _, _ -> }
+  var onOpen: (Response) -> Unit = {}
 
   override fun onMethodCall(call: MethodCall, result: Result) {
     println(call.method)
@@ -63,11 +65,16 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
               }
             }
             .build()
+
+        onOpen = { res -> result.success(res.body()?.string()) }
+        onFailure = { e, res -> result.error(e.message, res?.body()?.string(), null) }
+
         websocket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
           override fun onOpen(webSocket: WebSocket, response: Response) {
           println(response.body().toString())
             handler.post {
-              result.success(response.body().toString())
+              onOpen(response)
+              onOpen = { }
             }
           }
 
@@ -75,13 +82,15 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             println(message)
             handler.post {
               onMessage(message)
+              onMessage = {}
             }
           }
 
-          override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            println(t.message)
+          override fun onFailure(webSocket: WebSocket, e: Throwable, response: Response?) {
+            println(e.message)
             handler.post {
-              result.error(t.message, response?.body().toString(), response)
+              onFailure(e, response)
+              onFailure = { _, _ -> }
             }
           }
 
@@ -89,15 +98,21 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             println(reason)
             handler.post {
               onClosed(code, reason)
+              onClosed = { _, _ -> }
             }
           }
         })
       }
       "send" -> {
+        val message = call.argument<String>("message")!!
+        println(message)
         onMessage = {
           result.success(it)
         }
-        websocket.send(call.argument<String>("message")!!)
+        onFailure = { e, res ->
+          result.error(e.message, res?.body()?.string(), null)
+        }
+        websocket.send(message)
       }
       "close" -> {
         onClosed = { code, _ ->
