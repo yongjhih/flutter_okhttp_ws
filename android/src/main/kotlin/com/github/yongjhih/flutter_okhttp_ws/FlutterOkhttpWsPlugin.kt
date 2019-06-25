@@ -75,6 +75,7 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             handler.post {
               onOpen(response)
               onOpen = { }
+              onFailure = { _, _ -> }
             }
           }
 
@@ -83,6 +84,7 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             handler.post {
               onMessage(message)
               onMessage = {}
+              onFailure = { _, _ -> }
             }
           }
 
@@ -99,6 +101,7 @@ class FlutterOkhttpWsPlugin: MethodCallHandler {
             handler.post {
               onClosed(code, reason)
               onClosed = { _, _ -> }
+              onFailure = { _, _ -> }
             }
           }
         })
